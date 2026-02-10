@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Tech Core 10 - 私人投資雷達</title>
+    <title>Tech Core 10 - AI 投資分析系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
@@ -18,8 +18,8 @@
     <div id="app">
         
         <div v-if="!isUnlocked" class="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center">
-            <div class="mb-8 text-center animate__animated animate__fadeIn">
-                <h1 class="text-2xl font-black text-white tracking-[0.5em] uppercase mb-4">Terminal Locked</h1>
+            <div class="mb-8 text-center">
+                <h1 class="text-2xl font-black text-white tracking-[0.5em] uppercase mb-4">Security Lock</h1>
                 <div class="h-1 w-24 bg-blue-600 mx-auto"></div>
             </div>
             <input type="password" maxlength="4" v-model="passInput" @input="checkPass" placeholder="••••" 
@@ -35,6 +35,7 @@
                         <p class="text-gray-400 mt-2">10 檔科技核心監控：M7 + AVGO, TSM, ORCL</p>
                     </div>
                     <div class="text-right">
+                        <button @click="resetAiKey" class="text-[10px] text-blue-500 hover:underline mb-2 block ml-auto">重新設定 AI Key</button>
                         <button @click="logout" class="text-[10px] text-gray-600 hover:text-red-500 underline mb-2">安全登出</button>
                         <div class="px-4 py-1 bg-gray-900 rounded-full border border-gray-800 text-blue-400 font-mono text-sm">
                             Refresh in {{ countdown }}s
@@ -74,7 +75,7 @@
                         </div>
                         <div class="p-4 bg-gray-900 border-t border-gray-800 flex gap-2">
                             <input v-model="userInput" @keyup.enter="askGemini" type="text" placeholder="詢問 AI 分析..." class="flex-1 bg-black border border-gray-700 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500">
-                            <button @click="askGemini" class="bg-blue-600 p-2 rounded-full">➜</button>
+                            <button @click="askGemini" class="bg-blue-600 p-2 rounded-full font-bold text-white">➜</button>
                         </div>
                     </div>
                     <button v-else @click="chatOpen = true" class="w-16 h-16 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center text-3xl hover:scale-110 transition-transform">🤖</button>
@@ -106,10 +107,7 @@
                     passInput: '',
                     errorMsg: '',
                     correctPass: '0923',
-                    // --- API Keys ---
                     STOCK_KEY: 'd65qv59r01qiish0oeo0d65qv59r01qiish0oeog',
-                    GEMINI_KEY: 'AIzaSyDjfMSJ62iLL8eBV72Bu-7zCYiaeGuOZnw',
-                    // ----------------
                     stocks: [
                         { symbol: 'AAPL', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
                         { symbol: 'MSFT', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
@@ -144,6 +142,10 @@
                     }
                 },
                 logout() { this.isUnlocked = false; this.passInput = ''; },
+                resetAiKey() {
+                    localStorage.removeItem('user_gemini_key');
+                    alert('AI Key 已清除，下次對話時將重新詢問。');
+                },
                 startSystem() {
                     this.updateData();
                     setInterval(() => {
@@ -167,6 +169,15 @@
                 },
                 async askGemini() {
                     if (!this.userInput) return;
+                    
+                    // 從瀏覽器本地儲存讀取 Key，若無則詢問
+                    let savedKey = localStorage.getItem('user_gemini_key');
+                    if (!savedKey) {
+                        savedKey = prompt("請輸入您的 Gemini API Key (此 Key 將安全儲存在您的瀏覽器中)：");
+                        if (savedKey) localStorage.setItem('user_gemini_key', savedKey);
+                        else return;
+                    }
+
                     const text = this.userInput;
                     this.chatHistory.push({ role: 'user', text });
                     this.userInput = '';
@@ -174,12 +185,14 @@
                     
                     const context = this.stocks.map(s => `${s.symbol}: $${s.price} (距52W低點${s.distLow}%)`).join(', ');
                     try {
-                        const genAI = new GoogleGenerativeAI(this.GEMINI_KEY);
+                        const genAI = new GoogleGenerativeAI(savedKey);
                         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                        const result = await model.generateContent(`專業美股分析師模式。目前數據：[${context}]。回答語氣專業且簡潔。請回答：${text}`);
+                        const result = await model.generateContent(`專業分析師模式。數據：[${context}]。回答：${text}`);
                         this.chatHistory.push({ role: 'model', text: result.response.text().replace(/\n/g, '<br>') });
-                    } catch (e) { this.chatHistory.push({ role: 'model', text: 'AI 連線失敗。' }); }
-                    finally {
+                    } catch (e) { 
+                        this.chatHistory.push({ role: 'model', text: `❌ 連線失敗: ${e.message}。請確認您的 API Key 是否正確。` });
+                        localStorage.removeItem('user_gemini_key'); // 失敗時自動清除，方便重新輸入
+                    } finally {
                         this.isTyping = false;
                         nextTick(() => { const b = document.getElementById('chatbox'); b.scrollTop = b.scrollHeight; });
                     }
