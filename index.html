@@ -2,191 +2,170 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Tech Core 10 - 專業級投資雷達</title>
+    <title>Tech Core 10 - AI 投資分析系統</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
     <style>
-        @keyframes pulse-green {
-            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-            70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
-        }
+        @keyframes pulse-green { 0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); } 70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); } 100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); } }
         .strong-buy { animation: pulse-green 2s infinite; border: 2px solid #22c55e; }
-        .bg-card { background: #111827; border: 1px solid #1f2937; cursor: pointer; transition: all 0.3s; }
-        .bg-card:hover { transform: translateY(-5px); border-color: #3b82f6; }
-        .modal-overlay { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); }
+        .bg-card { background: #111827; border: 1px solid #1f2937; cursor: pointer; transition: 0.3s; }
+        .bg-card:hover { border-color: #3b82f6; transform: translateY(-3px); }
+        .chat-container { height: 450px; display: flex; flex-direction: column; }
     </style>
 </head>
 <body class="bg-black text-gray-200 font-sans min-h-screen">
-    <div id="app" class="max-w-7xl mx-auto px-6 py-10">
+    <div id="app" class="max-w-7xl mx-auto px-6 py-10 relative">
         
-        <header class="flex justify-between items-center mb-12">
+        <header class="flex justify-between items-end mb-12">
             <div>
-                <h1 class="text-4xl font-black text-white tracking-tighter uppercase">Market <span class="text-blue-500">Intelligence</span></h1>
-                <p class="text-gray-400 mt-2">點擊卡片查看專家估值與技術圖表</p>
+                <h1 class="text-4xl font-black text-white uppercase tracking-tighter">Market <span class="text-blue-500">AI Radar</span></h1>
+                <p class="text-gray-400 mt-2">10 檔核心科技股實時監控系統</p>
             </div>
-            <div class="px-4 py-2 bg-gray-900 rounded-lg border border-gray-800 text-right">
-                <span class="text-[10px] text-gray-500 block uppercase">更新倒數</span>
-                <span class="text-blue-400 font-mono">{{ countdown }}s</span>
+            <div class="text-right">
+                <button @click="resetKey" class="text-[10px] text-gray-600 hover:text-gray-400 underline uppercase tracking-widest mb-2">更新 API Key</button>
+                <div class="px-3 py-1 bg-gray-900 rounded border border-gray-800 text-blue-400 font-mono text-sm">{{ countdown }}s</div>
             </div>
         </header>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-20">
             <div v-for="s in stocks" :key="s.symbol" @click="openModal(s)"
                  :class="['bg-card p-6 rounded-2xl', s.isBuy ? 'strong-buy' : '']">
-                
-                <div class="flex justify-between items-center mb-4">
+                <div class="flex justify-between items-start mb-4">
                     <h3 class="text-2xl font-black text-white">{{ s.symbol }}</h3>
-                    <span v-if="s.isBuy" class="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded uppercase">Strong Signal</span>
+                    <span v-if="s.isBuy" class="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded">BUY</span>
                 </div>
-
                 <div class="text-3xl font-mono text-white">${{ s.price }}</div>
                 <div :class="['text-sm mt-1 font-bold', s.change >= 0 ? 'text-green-400' : 'text-red-400']">
                     {{ s.change >= 0 ? '+' : '' }}{{ s.change }}%
                 </div>
-
-                <div class="mt-8 pt-4 border-t border-gray-800 space-y-3">
-                    <div class="flex justify-between text-[10px] text-gray-500 uppercase">
-                        <span>距 52W 低點</span>
-                        <span :class="s.distLow < 5 ? 'text-green-400 font-bold' : 'text-gray-300'">{{ s.distLow }}%</span>
-                    </div>
-                    <div class="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
-                        <div class="h-full bg-blue-500 transition-all duration-1000" :style="{ width: s.pos + '%' }"></div>
-                    </div>
+                <div class="mt-8 pt-4 border-t border-gray-800 flex justify-between text-[10px] uppercase">
+                    <span class="text-gray-500 font-bold">距 52W 低點</span>
+                    <span :class="s.distLow < 5 ? 'text-green-400' : ''">{{ s.distLow }}%</span>
                 </div>
             </div>
         </div>
 
-        <div v-if="selectedStock" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay" @click.self="selectedStock = null">
-            <div class="bg-gray-900 w-full max-w-5xl max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-gray-700">
-                
+        <div class="fixed bottom-6 right-6 z-50">
+            <div v-if="chatOpen" class="w-80 md:w-96 bg-gray-900 border border-gray-700 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate__animated animate__fadeInUp">
+                <div class="p-4 bg-gradient-to-r from-blue-700 to-blue-500 text-white font-bold flex justify-between items-center">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xl">✨</span> Gemini 智慧顧問
+                    </div>
+                    <button @click="chatOpen = false" class="hover:text-gray-200 text-xl">✕</button>
+                </div>
+                <div class="chat-container p-4 overflow-y-auto space-y-4 bg-gray-900" id="chatbox">
+                    <div v-for="msg in chatHistory" :class="['p-3 rounded-xl max-w-[90%] text-sm leading-relaxed', msg.role === 'user' ? 'bg-blue-600 text-white self-end ml-auto' : 'bg-gray-800 text-gray-200 self-start']">
+                        <div v-html="msg.text"></div>
+                    </div>
+                    <div v-if="isTyping" class="text-blue-400 italic text-[10px] animate-pulse">Gemini 正在深入分析數據...</div>
+                </div>
+                <div class="p-4 border-t border-gray-800 bg-gray-900 flex gap-2">
+                    <input v-model="userInput" @keyup.enter="askGemini" type="text" placeholder="例：幫我分析現在的買點..." class="flex-1 bg-black border border-gray-700 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500">
+                    <button @click="askGemini" class="bg-blue-600 p-2 rounded-full hover:bg-blue-500">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
+                    </button>
+                </div>
+            </div>
+            <button v-else @click="chatOpen = true" class="w-16 h-16 bg-blue-600 rounded-full shadow-2xl flex items-center justify-center text-3xl hover:scale-110 transition-transform animate__animated animate__bounceIn">🤖</button>
+        </div>
+        
+        <div v-if="selectedStock" class="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/90 backdrop-blur-sm" @click.self="selectedStock = null">
+            <div class="bg-gray-900 w-full max-w-5xl rounded-3xl overflow-hidden border border-gray-700 shadow-2xl">
                 <div class="p-6 border-b border-gray-800 flex justify-between items-center">
-                    <div>
-                        <h2 class="text-3xl font-black text-white">{{ selectedStock.symbol }} 詳細分析</h2>
-                        <p class="text-gray-400 text-sm">技術指標 (周線/月線) 與分析師估值</p>
-                    </div>
-                    <button @click="selectedStock = null" class="text-gray-500 hover:text-white text-3xl">&times;</button>
+                    <h2 class="text-2xl font-black">{{ selectedStock.symbol }} 技術分析</h2>
+                    <button @click="selectedStock = null" class="text-3xl">&times;</button>
                 </div>
-
-                <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="bg-black/50 p-4 rounded-xl border border-gray-800 text-center">
-                            <span class="text-xs text-gray-500 uppercase">分析師平均目標價</span>
-                            <div class="text-2xl font-bold text-green-400 mt-1">${{ analystData.targetPrice || '載入中...' }}</div>
-                        </div>
-                        <div class="bg-black/50 p-4 rounded-xl border border-gray-800 text-center">
-                            <span class="text-xs text-gray-500 uppercase">當前市場共識</span>
-                            <div class="text-lg font-bold text-blue-400 mt-1 uppercase">{{ analystData.consensus || '載入中...' }}</div>
-                        </div>
-                        <div class="bg-black/50 p-4 rounded-xl border border-gray-800 text-center">
-                            <span class="text-xs text-gray-500 uppercase">上漲空間</span>
-                            <div class="text-2xl font-bold text-white mt-1">{{ analystData.upside || '--' }}%</div>
-                        </div>
-                    </div>
-
-                    <div class="w-full h-[450px] bg-black rounded-xl border border-gray-800 overflow-hidden" id="tv-chart-container">
-                        </div>
-                </div>
+                <div class="h-[500px] w-full" id="tv-chart"></div>
             </div>
         </div>
     </div>
 
-    <script>
+    <script type="importmap"> { "imports": { "@google/generative-ai": "https://esm.run/@google/generative-ai" } } </script>
+    <script type="module">
+        import { GoogleGenerativeAI } from "@google/generative-ai";
         const { createApp, nextTick } = Vue;
-        const API_KEY = 'd65qv59r01qiish0oeo0d65qv59r01qiish0oeog';
+        const STOCK_API = 'd65qv59r01qiish0oeo0d65qv59r01qiish0oeog';
 
         createApp({
             data() {
                 return {
                     countdown: 60,
                     stocks: [
-                        { symbol: 'AAPL', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'MSFT', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'GOOGL', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'AMZN', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'NVDA', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'META', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'TSLA', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'AVGO', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'TSM', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'ORCL', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false }
+                        { symbol: 'AAPL', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'MSFT', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'GOOGL', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'AMZN', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'NVDA', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'META', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'TSLA', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'AVGO', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'TSM', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'ORCL', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false }
                     ],
-                    selectedStock: null,
-                    analystData: { targetPrice: '', consensus: '', upside: '' }
+                    chatOpen: false,
+                    userInput: '',
+                    chatHistory: [{ role: 'model', text: '你好！我是你的 AI 投資助手。我已同步你的 10 檔科技股數據，想問哪一檔的分析？' }],
+                    isTyping: false,
+                    apiKey: 'AIzaSyDjfMSJ62iLL8eBV72Bu-7zCYiaeGuOZnw', // 你提供的 Key
+                    selectedStock: null
                 }
             },
             mounted() {
-                this.refreshData();
+                this.updateData();
                 setInterval(() => {
-                    if (this.countdown <= 1) { this.refreshData(); this.countdown = 60; }
+                    if (this.countdown <= 1) { this.updateData(); this.countdown = 60; }
                     else { this.countdown--; }
                 }, 1000);
             },
             methods: {
-                async refreshData() {
+                async updateData() {
                     for (let s of this.stocks) {
                         try {
-                            const qRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${API_KEY}`);
-                            const qData = await qRes.json();
-                            const mRes = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${s.symbol}&metric=all&token=${API_KEY}`);
-                            const mData = await mRes.json();
+                            const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${STOCK_API}`);
+                            const d = await res.json();
+                            const mRes = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${s.symbol}&metric=all&token=${STOCK_API}`);
+                            const m = await mRes.json();
                             
-                            const low52 = mData.metric['52WeekLow'];
-                            const high52 = mData.metric['52WeekHigh'];
-                            
-                            s.price = qData.c.toFixed(2);
-                            s.change = qData.dp.toFixed(2);
-                            s.distLow = (((qData.c - low52) / low52) * 100).toFixed(1);
-                            s.pos = ((qData.c - low52) / (high52 - low52)) * 100;
+                            s.price = d.c.toFixed(2);
+                            s.change = d.dp.toFixed(2);
+                            s.distLow = (((d.c - m.metric['52WeekLow']) / m.metric['52WeekLow']) * 100).toFixed(1);
                             s.isBuy = s.distLow < 5;
                         } catch (e) { console.error(e); }
                     }
                 },
-                async openModal(stock) {
-                    this.selectedStock = stock;
-                    this.analystData = { targetPrice: '載入中...', consensus: '分析中...', upside: '--' };
-                    
-                    // 1. 獲取分析師數據
-                    this.fetchAnalystInfo(stock.symbol);
+                async askGemini() {
+                    if (!this.userInput) return;
+                    const text = this.userInput;
+                    this.chatHistory.push({ role: 'user', text });
+                    this.userInput = '';
+                    this.isTyping = true;
 
-                    // 2. 渲染 TradingView 圖表
-                    await nextTick();
-                    this.renderChart(stock.symbol);
-                },
-                async fetchAnalystInfo(symbol) {
+                    const context = this.stocks.map(s => `${s.symbol}: $${s.price} (${s.change}%, 距低點${s.distLow}%)`).join(', ');
+                    const prompt = `你是一個資深美股分析師。目前數據：[${context}]。請用繁體中文回答：${text}`;
+
                     try {
-                        const targetRes = await fetch(`https://finnhub.io/api/v1/stock/price-target?symbol=${symbol}&token=${API_KEY}`);
-                        const targetData = await targetRes.json();
-                        const recRes = await fetch(`https://finnhub.io/api/v1/stock/recommendation?symbol=${symbol}&token=${API_KEY}`);
-                        const recData = await recRes.json();
-
-                        const avgTarget = targetData.targetMean;
-                        this.analystData.targetPrice = avgTarget.toFixed(2);
-                        this.analystData.upside = (((avgTarget - this.selectedStock.price) / this.selectedStock.price) * 100).toFixed(1);
-                        
-                        const trend = recData[0]; // 最新月份
-                        if (trend.strongBuy + trend.buy > trend.hold) this.analystData.consensus = "強力推薦購買";
-                        else this.analystData.consensus = "觀望 / 持有";
-                    } catch (e) { this.analystData.consensus = "暫無數據"; }
+                        const genAI = new GoogleGenerativeAI(this.apiKey);
+                        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                        const result = await model.generateContent(prompt);
+                        this.chatHistory.push({ role: 'model', text: result.response.text().replace(/\n/g, '<br>') });
+                    } catch (e) {
+                        this.chatHistory.push({ role: 'model', text: '連線失敗，請檢查 API Key 狀態。' });
+                    } finally {
+                        this.isTyping = false;
+                        nextTick(() => { const b = document.getElementById('chatbox'); b.scrollTop = b.scrollHeight; });
+                    }
                 },
-                renderChart(symbol) {
+                async openModal(s) {
+                    this.selectedStock = s;
+                    await nextTick();
                     new TradingView.widget({
-                        "autosize": true,
-                        "symbol": `NASDAQ:${symbol}`,
-                        "interval": "D",
-                        "timezone": "Etc/UTC",
-                        "theme": "dark",
-                        "style": "1",
-                        "locale": "zh_TW",
-                        "toolbar_bg": "#f1f3f6",
-                        "enable_publishing": false,
-                        "allow_symbol_change": true,
-                        "container_id": "tv-chart-container"
+                        "autosize": true, "symbol": s.symbol, "interval": "D", "theme": "dark", "style": "1", "locale": "zh_TW", "container_id": "tv-chart"
                     });
                 }
             }
         }).mount('#app');
     </script>
-    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
+    <script src="https://s3.tradingview.com/tv.js"></script>
 </body>
 </html>
