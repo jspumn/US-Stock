@@ -18,63 +18,43 @@
     <div id="app">
         
         <div v-if="!isUnlocked" class="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center">
-            <div class="mb-8 text-center">
-                <h1 class="text-2xl font-black text-white tracking-[0.5em] uppercase mb-4">Security Lock</h1>
-                <div class="h-1 w-24 bg-blue-600 mx-auto"></div>
-            </div>
-            <input type="password" maxlength="4" v-model="passInput" @input="checkPass" placeholder="••••" 
-                   class="login-field w-64 py-5 rounded-3xl">
+            <h1 class="text-2xl font-black text-white tracking-[0.5em] uppercase mb-4">Security Lock</h1>
+            <input type="password" maxlength="4" v-model="passInput" @input="checkPass" placeholder="••••" class="login-field w-64 py-5 rounded-3xl">
             <p v-if="errorMsg" class="mt-4 text-red-500 font-mono text-sm">{{ errorMsg }}</p>
         </div>
 
         <template v-if="isUnlocked">
             <div class="max-w-7xl mx-auto px-6 py-10 animate__animated animate__fadeIn">
                 <header class="flex justify-between items-end mb-12 border-b border-gray-800 pb-8">
-                    <div>
-                        <h1 class="text-4xl font-black text-white tracking-tighter uppercase">Market <span class="text-blue-500">Analysis</span></h1>
-                        <p class="text-gray-400 mt-2">10 檔科技核心監控：M7 + AVGO, TSM, ORCL</p>
-                    </div>
+                    <h1 class="text-4xl font-black text-white uppercase tracking-tighter">Market <span class="text-blue-500">Analysis</span></h1>
                     <div class="text-right">
-                        <button @click="resetAiKey" class="text-[10px] text-blue-500 hover:underline mb-2 block ml-auto">重新設定 AI Key</button>
-                        <button @click="logout" class="text-[10px] text-gray-600 hover:text-red-500 underline mb-2">安全登出</button>
-                        <div class="px-4 py-1 bg-gray-900 rounded-full border border-gray-800 text-blue-400 font-mono text-sm">
-                            Refresh in {{ countdown }}s
-                        </div>
+                        <button @click="resetAiKey" class="text-[10px] text-blue-500 hover:underline mb-2 block ml-auto tracking-widest uppercase">Reset AI Key</button>
+                        <div class="px-4 py-1 bg-gray-900 rounded-full border border-gray-800 text-blue-400 font-mono text-sm">Refresh in {{ countdown }}s</div>
                     </div>
                 </header>
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6 mb-20">
-                    <div v-for="s in stocks" :key="s.symbol" @click="openModal(s)"
-                         :class="['bg-card p-6 rounded-2xl', s.isBuy ? 'strong-buy' : '']">
-                        <div class="flex justify-between items-start mb-4">
-                            <h3 class="text-2xl font-black text-white">{{ s.symbol }}</h3>
-                            <span v-if="s.isBuy" class="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded">BUY</span>
-                        </div>
-                        <div class="text-3xl font-mono text-white">${{ s.price }}</div>
-                        <div :class="['text-sm mt-1 font-bold', s.change >= 0 ? 'text-green-400' : 'text-red-400']">
-                            {{ s.change >= 0 ? '+' : '' }}{{ s.change }}%
-                        </div>
-                        <div class="mt-8 pt-4 border-t border-gray-800 flex justify-between text-[10px] uppercase font-bold text-gray-500">
-                            <span>52W Low Dist</span>
-                            <span :class="s.distLow < 5 ? 'text-green-400' : 'text-gray-300'">{{ s.distLow }}%</span>
-                        </div>
+                    <div v-for="s in stocks" :key="s.symbol" @click="openModal(s)" :class="['bg-card p-6 rounded-2xl', s.isBuy ? 'strong-buy' : '']">
+                        <h3 class="text-2xl font-black text-white">{{ s.symbol }}</h3>
+                        <div class="text-3xl font-mono text-white mt-2">${{ s.price }}</div>
+                        <div class="mt-8 pt-4 border-t border-gray-800 text-[10px] uppercase font-bold text-gray-500">52W Low Dist: <span :class="s.isBuy?'text-green-400':''">{{ s.distLow }}%</span></div>
                     </div>
                 </div>
 
                 <div class="fixed bottom-6 right-6 z-50">
                     <div v-if="chatOpen" class="w-80 md:w-96 bg-gray-900 border border-gray-700 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate__animated animate__fadeInUp">
                         <div class="p-4 bg-blue-600 text-white font-bold flex justify-between items-center">
-                            <span>✨ AI 投資顧問 (Gemini)</span>
+                            <span>✨ AI Advisor</span>
                             <button @click="chatOpen = false">✕</button>
                         </div>
                         <div class="h-[400px] p-4 overflow-y-auto space-y-4 bg-gray-950 text-sm" id="chatbox">
                             <div v-for="msg in chatHistory" :class="['p-3 rounded-2xl max-w-[90%]', msg.role === 'user' ? 'bg-blue-900 ml-auto' : 'bg-gray-800']">
                                 <div v-html="msg.text"></div>
                             </div>
-                            <div v-if="isTyping" class="text-blue-500 text-xs animate-pulse">Gemini 正在計算數據...</div>
+                            <div v-if="isTyping" class="text-blue-500 text-xs animate-pulse font-mono tracking-widest">ANALYZING...</div>
                         </div>
                         <div class="p-4 bg-gray-900 border-t border-gray-800 flex gap-2">
-                            <input v-model="userInput" @keyup.enter="askGemini" type="text" placeholder="詢問 AI 分析..." class="flex-1 bg-black border border-gray-700 rounded-full px-4 py-2 text-sm focus:outline-none focus:border-blue-500">
+                            <input v-model="userInput" @keyup.enter="askGemini" type="text" placeholder="詢問 AI 分析..." class="flex-1 bg-black border border-gray-700 rounded-full px-4 py-2 text-sm focus:outline-none">
                             <button @click="askGemini" class="bg-blue-600 p-2 rounded-full font-bold text-white">➜</button>
                         </div>
                     </div>
@@ -84,10 +64,6 @@
 
             <div v-if="selectedStock" class="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/95" @click.self="selectedStock = null">
                 <div class="bg-gray-900 w-full max-w-6xl h-[85vh] rounded-3xl overflow-hidden border border-gray-700 flex flex-col">
-                    <div class="p-6 flex justify-between items-center">
-                        <h2 class="text-2xl font-black">{{ selectedStock.symbol }} Chart</h2>
-                        <button @click="selectedStock = null" class="text-3xl text-gray-500 hover:text-white">&times;</button>
-                    </div>
                     <div id="tv-chart" class="flex-1"></div>
                 </div>
             </div>
@@ -103,95 +79,64 @@
         createApp({
             data() {
                 return {
-                    isUnlocked: false,
-                    passInput: '',
-                    errorMsg: '',
-                    correctPass: '0923',
-                    STOCK_KEY: 'd65qv59r01qiish0oeo0d65qv59r01qiish0oeog',
+                    isUnlocked: false, passInput: '', errorMsg: '', correctPass: '0923',
+                    FINNHUB_KEY: 'd65qv59r01qiish0oeo0d65qv59r01qiish0oeog',
                     stocks: [
-                        { symbol: 'AAPL', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'MSFT', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'GOOGL', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'AMZN', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'NVDA', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'META', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'TSLA', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'AVGO', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'TSM', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false },
-                        { symbol: 'ORCL', price: '0', change: 0, distLow: 0, pos: 0, isBuy: false }
+                        { symbol: 'AAPL', price: '0', change: 0, distLow: 0, isBuy: false },
+                        { symbol: 'MSFT', price: '0', change: 0, distLow: 0, isBuy: false },
+                        { symbol: 'GOOGL', price: '0', change: 0, distLow: 0, isBuy: false },
+                        { symbol: 'AMZN', price: '0', change: 0, distLow: 0, isBuy: false },
+                        { symbol: 'NVDA', price: '0', change: 0, distLow: 0, isBuy: false },
+                        { symbol: 'META', price: '0', change: 0, distLow: 0, isBuy: false },
+                        { symbol: 'TSLA', price: '0', change: 0, distLow: 0, isBuy: false },
+                        { symbol: 'AVGO', price: '0', change: 0, distLow: 0, isBuy: false },
+                        { symbol: 'TSM', price: '0', change: 0, distLow: 0, isBuy: false },
+                        { symbol: 'ORCL', price: '0', change: 0, distLow: 0, isBuy: false }
                     ],
-                    countdown: 60,
-                    chatOpen: false,
-                    userInput: '',
-                    isTyping: false,
-                    chatHistory: [{ role: 'model', text: '驗證通過。我是你的 AI 顧問，隨時可以分析這 10 檔科技股數據。' }],
+                    countdown: 60, chatOpen: false, userInput: '', isTyping: false,
+                    chatHistory: [{ role: 'model', text: '系統解鎖。請輸入問題，我將讀取現有股價為您分析。' }],
                     selectedStock: null
                 }
             },
             methods: {
-                checkPass() {
-                    if (this.passInput.length === 4) {
-                        if (this.passInput === this.correctPass) {
-                            this.isUnlocked = true;
-                            this.startSystem();
-                        } else {
-                            this.errorMsg = 'ACCESS DENIED';
-                            this.passInput = '';
-                            setTimeout(() => this.errorMsg = '', 2000);
-                        }
-                    }
-                },
+                checkPass() { if (this.passInput === this.correctPass) { this.isUnlocked = true; this.start(); } },
                 logout() { this.isUnlocked = false; this.passInput = ''; },
-                resetAiKey() {
-                    localStorage.removeItem('user_gemini_key');
-                    alert('AI Key 已清除，下次對話時將重新詢問。');
-                },
-                startSystem() {
-                    this.updateData();
-                    setInterval(() => {
-                        if (this.countdown <= 1) { this.updateData(); this.countdown = 60; }
-                        else { this.countdown--; }
-                    }, 1000);
-                },
-                async updateData() {
+                resetAiKey() { localStorage.removeItem('local_gemini_key'); alert('AI Key 已清除。'); },
+                start() { this.update(); setInterval(() => { if (this.countdown <= 1) { this.update(); this.countdown = 60; } else this.countdown--; }, 1000); },
+                async update() {
                     for (let s of this.stocks) {
                         try {
-                            const res = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${this.STOCK_KEY}`);
-                            const d = await res.json();
-                            const mRes = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${s.symbol}&metric=all&token=${this.STOCK_KEY}`);
-                            const m = await mRes.json();
-                            s.price = d.c.toFixed(2);
-                            s.change = d.dp.toFixed(2);
-                            s.distLow = (((d.c - m.metric['52WeekLow']) / m.metric['52WeekLow']) * 100).toFixed(1);
+                            const r1 = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${this.FINNHUB_KEY}`);
+                            const d1 = await r1.json();
+                            const r2 = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${s.symbol}&metric=all&token=${this.FINNHUB_KEY}`);
+                            const d2 = await r2.json();
+                            s.price = d1.c.toFixed(2);
+                            s.distLow = (((d1.c - d2.metric['52WeekLow']) / d2.metric['52WeekLow']) * 100).toFixed(1);
                             s.isBuy = s.distLow < 5;
                         } catch (e) { console.error(e); }
                     }
                 },
                 async askGemini() {
                     if (!this.userInput) return;
-                    
-                    // 從瀏覽器本地儲存讀取 Key，若無則詢問
-                    let savedKey = localStorage.getItem('user_gemini_key');
-                    if (!savedKey) {
-                        savedKey = prompt("請輸入您的 Gemini API Key (此 Key 將安全儲存在您的瀏覽器中)：");
-                        if (savedKey) localStorage.setItem('user_gemini_key', savedKey);
+                    let apiKey = localStorage.getItem('local_gemini_key');
+                    if (!apiKey) {
+                        apiKey = prompt("請輸入您的 Gemini API Key (系統將安全存在本地瀏覽器)：");
+                        if (apiKey) localStorage.setItem('local_gemini_key', apiKey);
                         else return;
                     }
-
                     const text = this.userInput;
                     this.chatHistory.push({ role: 'user', text });
                     this.userInput = '';
                     this.isTyping = true;
-                    
-                    const context = this.stocks.map(s => `${s.symbol}: $${s.price} (距52W低點${s.distLow}%)`).join(', ');
+                    const context = this.stocks.map(s => `${s.symbol}: $${s.price}`).join(', ');
                     try {
-                        const genAI = new GoogleGenerativeAI(savedKey);
+                        const genAI = new GoogleGenerativeAI(apiKey);
                         const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                        const result = await model.generateContent(`專業分析師模式。數據：[${context}]。回答：${text}`);
+                        const result = await model.generateContent(`專業美股顧問模式。數據：[${context}]。回答：${text}`);
                         this.chatHistory.push({ role: 'model', text: result.response.text().replace(/\n/g, '<br>') });
-                    } catch (e) { 
-                        this.chatHistory.push({ role: 'model', text: `❌ 連線失敗: ${e.message}。請確認您的 API Key 是否正確。` });
-                        localStorage.removeItem('user_gemini_key'); // 失敗時自動清除，方便重新輸入
+                    } catch (e) {
+                        this.chatHistory.push({ role: 'model', text: `❌ 連線失敗: ${e.message}。系統已清除 Key，請重新整理網頁並輸入新 Key。` });
+                        localStorage.removeItem('local_gemini_key');
                     } finally {
                         this.isTyping = false;
                         nextTick(() => { const b = document.getElementById('chatbox'); b.scrollTop = b.scrollHeight; });
@@ -200,9 +145,7 @@
                 async openModal(s) {
                     this.selectedStock = s;
                     await nextTick();
-                    new TradingView.widget({
-                        "autosize": true, "symbol": s.symbol, "interval": "D", "theme": "dark", "style": "1", "locale": "zh_TW", "container_id": "tv-chart"
-                    });
+                    new TradingView.widget({ "autosize": true, "symbol": s.symbol, "theme": "dark", "container_id": "tv-chart", "locale": "zh_TW" });
                 }
             }
         }).mount('#app');
