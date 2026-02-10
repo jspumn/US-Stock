@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <title>Tech Core 10 - 實時加碼雷達</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <style>
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .strong-buy { animation: pulse-green 2s infinite; border: 2px solid #22c55e; transform: scale(1.02); }
+        .bg-card { background: #111827; border: 1px solid #1f2937; }
+        .loading-bar { height: 2px; background: #3b82f6; transition: width 0.3s; }
+    </style>
+</head>
+<body class="bg-black text-gray-200 font-sans">
+    <div id="app" class="max-w-7xl mx-auto px-6 py-10">
+        
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-12">
+            <div>
+                <h1 class="text-4xl font-black text-white tracking-tighter uppercase">Market <span class="text-green-500">Signal</span></h1>
+                <p class="text-gray-400 mt-2">連線中：Finnhub Real-time Data</p>
+            </div>
+            <div class="mt-4 md:mt-0 text-right">
+                <div class="px-4 py-2 bg-gray-900 rounded-lg border border-gray-800">
+                    <span class="text-[10px] text-gray-500 block uppercase tracking-widest">下一次更新</span>
+                    <span class="text-blue-400 font-mono">{{ countdown }}s</span>
+                </div>
+            </div>
+        </header>
+
+        <div v-if="signals.length > 0" class="mb-8 p-5 bg-green-500 text-black rounded-xl flex items-center shadow-2xl">
+            <span class="text-3xl mr-4 animate-bounce">💰</span>
+            <div>
+                <h2 class="font-black text-lg">加碼機會觸發！</h2>
+                <p class="font-bold uppercase">{{ signals.join(' / ') }} 處於歷史相對低位</p>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
+            <div v-for="s in stocks" :key="s.symbol" 
+                 :class="['bg-card p-6 rounded-2xl transition-all duration-500', s.isBuy ? 'strong-buy' : 'opacity-90']">
+                
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-2xl font-black text-white">{{ s.symbol }}</h3>
+                    <span v-if="s.isBuy" class="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded">BUY</span>
+                </div>
+
+                <div class="text-3xl font-mono text-white">${{ s.price }}</div>
+                <div :class="['text-sm mt-1', s.change >= 0 ? 'text-green-400' : 'text-red-400']">
+                    {{ s.change >= 0 ? '+' : '' }}{{ s.change }}%
+                </div>
+
+                <div class="mt-8 pt-4 border-t border-gray-800 space-y-4">
+                    <div class="flex justify-between text-xs">
+                        <span class="text-gray-500 uppercase tracking-widest">距 52W 低點</span>
+                        <span :class="['font-bold', s.distLow < 5 ? 'text-green-400' : 'text-white']">{{ s.distLow }}%</span>
+                    </div>
+                    <div class="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
+                        <div class="h-full bg-blue-500 transition-all duration-1000" :style="{ width: s.pos + '%' }"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <footer class="mt-16 text-center text-gray-600 text-xs">
+            更新頻率：每 60 秒 • 邏輯：距離 52 週最低點 < 5% 觸發強力購買 <br>
+            API Key: d65...og (已加密連線)
+        </footer>
+    </div>
+
+    <script>
+        const { createApp } = Vue;
+        const API_KEY = 'd65qv59r01qiish0oeo0d65qv59r01qiish0oeog';
+
+        createApp({
+            data() {
+                return {
+                    countdown: 60,
+                    stocks: [
+                        { symbol: 'AAPL', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'MSFT', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'GOOGL', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'AMZN', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'NVDA', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'META', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'TSLA', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'AVGO', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'TSM', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
+                        { symbol: 'ORCL', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false }
+                    ]
+                }
+            },
+            computed: {
+                signals() { return this.stocks.filter(s => s.isBuy).map(s => s.symbol); }
+            },
+            mounted() {
+                this.init();
+                setInterval(() => {
+                    if (this.countdown <= 1) {
+                        this.refreshData();
+                        this.countdown = 60;
+                    } else {
+                        this.countdown--;
+                    }
+                }, 1000);
+            },
+            methods: {
+                async init() { await this.refreshData(); },
+                async refreshData() {
+                    for (let s of this.stocks) {
+                        try {
+                            // 1. 抓取報價
+                            const qRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${API_KEY}`);
+                            const qData = await qRes.json();
+                            
+                            // 2. 抓取指標 (52週高低)
+                            const mRes = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${s.symbol}&metric=all&token=${API_KEY}`);
+                            const mData = await mRes.json();
+                            
+                            const low52 = mData.metric['52WeekLow'];
+                            const high52 = mData.metric['52WeekHigh'];
+                            
+                            s.price = qData.c.toFixed(2);
+                            s.change = qData.dp.toFixed(2);
+                            
+                            // 計算距 52週低點 %
+                            s.distLow = (((qData.c - low52) / low52) * 100).toFixed(1);
+                            
+                            // 計算股價在 52週內的位階百分比
+                            s.pos = ((qData.c - low52) / (high52 - low52)) * 100;
+                            
+                            // 買入邏輯：距離 52 週低點小於 5%
+                            s.isBuy = s.distLow < 5;
+                            
+                        } catch (e) { console.error(`${s.symbol} fetch error`, e); }
+                    }
+                }
+            }
+        }).mount('#app');
+    </script>
+</body>
+</html>
