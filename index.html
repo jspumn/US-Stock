@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <title>Tech Core 10 - 實時加碼雷達</title>
+    <title>Tech Core 10 - 專業級投資雷達</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
@@ -11,53 +11,44 @@
             70% { box-shadow: 0 0 0 15px rgba(34, 197, 94, 0); }
             100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
         }
-        .strong-buy { animation: pulse-green 2s infinite; border: 2px solid #22c55e; transform: scale(1.02); }
-        .bg-card { background: #111827; border: 1px solid #1f2937; }
-        .loading-bar { height: 2px; background: #3b82f6; transition: width 0.3s; }
+        .strong-buy { animation: pulse-green 2s infinite; border: 2px solid #22c55e; }
+        .bg-card { background: #111827; border: 1px solid #1f2937; cursor: pointer; transition: all 0.3s; }
+        .bg-card:hover { transform: translateY(-5px); border-color: #3b82f6; }
+        .modal-overlay { background: rgba(0, 0, 0, 0.85); backdrop-filter: blur(5px); }
     </style>
 </head>
-<body class="bg-black text-gray-200 font-sans">
+<body class="bg-black text-gray-200 font-sans min-h-screen">
     <div id="app" class="max-w-7xl mx-auto px-6 py-10">
         
-        <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-12">
+        <header class="flex justify-between items-center mb-12">
             <div>
-                <h1 class="text-4xl font-black text-white tracking-tighter uppercase">Market <span class="text-green-500">Signal</span></h1>
-                <p class="text-gray-400 mt-2">連線中：Finnhub Real-time Data</p>
+                <h1 class="text-4xl font-black text-white tracking-tighter uppercase">Market <span class="text-blue-500">Intelligence</span></h1>
+                <p class="text-gray-400 mt-2">點擊卡片查看專家估值與技術圖表</p>
             </div>
-            <div class="mt-4 md:mt-0 text-right">
-                <div class="px-4 py-2 bg-gray-900 rounded-lg border border-gray-800">
-                    <span class="text-[10px] text-gray-500 block uppercase tracking-widest">下一次更新</span>
-                    <span class="text-blue-400 font-mono">{{ countdown }}s</span>
-                </div>
+            <div class="px-4 py-2 bg-gray-900 rounded-lg border border-gray-800 text-right">
+                <span class="text-[10px] text-gray-500 block uppercase">更新倒數</span>
+                <span class="text-blue-400 font-mono">{{ countdown }}s</span>
             </div>
         </header>
 
-        <div v-if="signals.length > 0" class="mb-8 p-5 bg-green-500 text-black rounded-xl flex items-center shadow-2xl">
-            <span class="text-3xl mr-4 animate-bounce">💰</span>
-            <div>
-                <h2 class="font-black text-lg">加碼機會觸發！</h2>
-                <p class="font-bold uppercase">{{ signals.join(' / ') }} 處於歷史相對低位</p>
-            </div>
-        </div>
-
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-6">
-            <div v-for="s in stocks" :key="s.symbol" 
-                 :class="['bg-card p-6 rounded-2xl transition-all duration-500', s.isBuy ? 'strong-buy' : 'opacity-90']">
+            <div v-for="s in stocks" :key="s.symbol" @click="openModal(s)"
+                 :class="['bg-card p-6 rounded-2xl', s.isBuy ? 'strong-buy' : '']">
                 
                 <div class="flex justify-between items-center mb-4">
                     <h3 class="text-2xl font-black text-white">{{ s.symbol }}</h3>
-                    <span v-if="s.isBuy" class="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded">BUY</span>
+                    <span v-if="s.isBuy" class="bg-green-500 text-black text-[10px] font-black px-2 py-0.5 rounded uppercase">Strong Signal</span>
                 </div>
 
                 <div class="text-3xl font-mono text-white">${{ s.price }}</div>
-                <div :class="['text-sm mt-1', s.change >= 0 ? 'text-green-400' : 'text-red-400']">
+                <div :class="['text-sm mt-1 font-bold', s.change >= 0 ? 'text-green-400' : 'text-red-400']">
                     {{ s.change >= 0 ? '+' : '' }}{{ s.change }}%
                 </div>
 
-                <div class="mt-8 pt-4 border-t border-gray-800 space-y-4">
-                    <div class="flex justify-between text-xs">
-                        <span class="text-gray-500 uppercase tracking-widest">距 52W 低點</span>
-                        <span :class="['font-bold', s.distLow < 5 ? 'text-green-400' : 'text-white']">{{ s.distLow }}%</span>
+                <div class="mt-8 pt-4 border-t border-gray-800 space-y-3">
+                    <div class="flex justify-between text-[10px] text-gray-500 uppercase">
+                        <span>距 52W 低點</span>
+                        <span :class="s.distLow < 5 ? 'text-green-400 font-bold' : 'text-gray-300'">{{ s.distLow }}%</span>
                     </div>
                     <div class="h-1.5 w-full bg-gray-800 rounded-full overflow-hidden">
                         <div class="h-full bg-blue-500 transition-all duration-1000" :style="{ width: s.pos + '%' }"></div>
@@ -66,14 +57,42 @@
             </div>
         </div>
 
-        <footer class="mt-16 text-center text-gray-600 text-xs">
-            更新頻率：每 60 秒 • 邏輯：距離 52 週最低點 < 5% 觸發強力購買 <br>
-            API Key: d65...og (已加密連線)
-        </footer>
+        <div v-if="selectedStock" class="fixed inset-0 z-50 flex items-center justify-center p-4 modal-overlay" @click.self="selectedStock = null">
+            <div class="bg-gray-900 w-full max-w-5xl max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl flex flex-col border border-gray-700">
+                
+                <div class="p-6 border-b border-gray-800 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-3xl font-black text-white">{{ selectedStock.symbol }} 詳細分析</h2>
+                        <p class="text-gray-400 text-sm">技術指標 (周線/月線) 與分析師估值</p>
+                    </div>
+                    <button @click="selectedStock = null" class="text-gray-500 hover:text-white text-3xl">&times;</button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-6 space-y-6">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="bg-black/50 p-4 rounded-xl border border-gray-800 text-center">
+                            <span class="text-xs text-gray-500 uppercase">分析師平均目標價</span>
+                            <div class="text-2xl font-bold text-green-400 mt-1">${{ analystData.targetPrice || '載入中...' }}</div>
+                        </div>
+                        <div class="bg-black/50 p-4 rounded-xl border border-gray-800 text-center">
+                            <span class="text-xs text-gray-500 uppercase">當前市場共識</span>
+                            <div class="text-lg font-bold text-blue-400 mt-1 uppercase">{{ analystData.consensus || '載入中...' }}</div>
+                        </div>
+                        <div class="bg-black/50 p-4 rounded-xl border border-gray-800 text-center">
+                            <span class="text-xs text-gray-500 uppercase">上漲空間</span>
+                            <div class="text-2xl font-bold text-white mt-1">{{ analystData.upside || '--' }}%</div>
+                        </div>
+                    </div>
+
+                    <div class="w-full h-[450px] bg-black rounded-xl border border-gray-800 overflow-hidden" id="tv-chart-container">
+                        </div>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script>
-        const { createApp } = Vue;
+        const { createApp, nextTick } = Vue;
         const API_KEY = 'd65qv59r01qiish0oeo0d65qv59r01qiish0oeog';
 
         createApp({
@@ -91,33 +110,24 @@
                         { symbol: 'AVGO', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
                         { symbol: 'TSM', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false },
                         { symbol: 'ORCL', price: '0.00', change: 0, distLow: 0, pos: 0, isBuy: false }
-                    ]
+                    ],
+                    selectedStock: null,
+                    analystData: { targetPrice: '', consensus: '', upside: '' }
                 }
             },
-            computed: {
-                signals() { return this.stocks.filter(s => s.isBuy).map(s => s.symbol); }
-            },
             mounted() {
-                this.init();
+                this.refreshData();
                 setInterval(() => {
-                    if (this.countdown <= 1) {
-                        this.refreshData();
-                        this.countdown = 60;
-                    } else {
-                        this.countdown--;
-                    }
+                    if (this.countdown <= 1) { this.refreshData(); this.countdown = 60; }
+                    else { this.countdown--; }
                 }, 1000);
             },
             methods: {
-                async init() { await this.refreshData(); },
                 async refreshData() {
                     for (let s of this.stocks) {
                         try {
-                            // 1. 抓取報價
                             const qRes = await fetch(`https://finnhub.io/api/v1/quote?symbol=${s.symbol}&token=${API_KEY}`);
                             const qData = await qRes.json();
-                            
-                            // 2. 抓取指標 (52週高低)
                             const mRes = await fetch(`https://finnhub.io/api/v1/stock/metric?symbol=${s.symbol}&metric=all&token=${API_KEY}`);
                             const mData = await mRes.json();
                             
@@ -126,21 +136,57 @@
                             
                             s.price = qData.c.toFixed(2);
                             s.change = qData.dp.toFixed(2);
-                            
-                            // 計算距 52週低點 %
                             s.distLow = (((qData.c - low52) / low52) * 100).toFixed(1);
-                            
-                            // 計算股價在 52週內的位階百分比
                             s.pos = ((qData.c - low52) / (high52 - low52)) * 100;
-                            
-                            // 買入邏輯：距離 52 週低點小於 5%
                             s.isBuy = s.distLow < 5;
-                            
-                        } catch (e) { console.error(`${s.symbol} fetch error`, e); }
+                        } catch (e) { console.error(e); }
                     }
+                },
+                async openModal(stock) {
+                    this.selectedStock = stock;
+                    this.analystData = { targetPrice: '載入中...', consensus: '分析中...', upside: '--' };
+                    
+                    // 1. 獲取分析師數據
+                    this.fetchAnalystInfo(stock.symbol);
+
+                    // 2. 渲染 TradingView 圖表
+                    await nextTick();
+                    this.renderChart(stock.symbol);
+                },
+                async fetchAnalystInfo(symbol) {
+                    try {
+                        const targetRes = await fetch(`https://finnhub.io/api/v1/stock/price-target?symbol=${symbol}&token=${API_KEY}`);
+                        const targetData = await targetRes.json();
+                        const recRes = await fetch(`https://finnhub.io/api/v1/stock/recommendation?symbol=${symbol}&token=${API_KEY}`);
+                        const recData = await recRes.json();
+
+                        const avgTarget = targetData.targetMean;
+                        this.analystData.targetPrice = avgTarget.toFixed(2);
+                        this.analystData.upside = (((avgTarget - this.selectedStock.price) / this.selectedStock.price) * 100).toFixed(1);
+                        
+                        const trend = recData[0]; // 最新月份
+                        if (trend.strongBuy + trend.buy > trend.hold) this.analystData.consensus = "強力推薦購買";
+                        else this.analystData.consensus = "觀望 / 持有";
+                    } catch (e) { this.analystData.consensus = "暫無數據"; }
+                },
+                renderChart(symbol) {
+                    new TradingView.widget({
+                        "autosize": true,
+                        "symbol": `NASDAQ:${symbol}`,
+                        "interval": "D",
+                        "timezone": "Etc/UTC",
+                        "theme": "dark",
+                        "style": "1",
+                        "locale": "zh_TW",
+                        "toolbar_bg": "#f1f3f6",
+                        "enable_publishing": false,
+                        "allow_symbol_change": true,
+                        "container_id": "tv-chart-container"
+                    });
                 }
             }
         }).mount('#app');
     </script>
+    <script type="text/javascript" src="https://s3.tradingview.com/tv.js"></script>
 </body>
 </html>
